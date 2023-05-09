@@ -6,6 +6,9 @@ public class GameManagerScript : MonoBehaviour
 {
     public GameObject playerPrefab;
     public GameObject boxPrefab;
+    public GameObject goalPrefab;
+    public GameObject clearText;
+
     int[,] map;          //ゲームデザイン用の配列
     GameObject[,] field; //ゲーム管理用の配列
 
@@ -43,6 +46,35 @@ public class GameManagerScript : MonoBehaviour
         return new Vector2Int(-1, -1);
     }
 
+    bool IsCleared()
+    {
+        //Vector2Int型の可変長配列の作成
+        List<Vector2Int> goals = new List<Vector2Int>();
+
+        for (int y = 0; y < field.GetLength(0); y++)
+        {
+            for (int x = 0; x < field.GetLength(1); x++)
+            {
+                if (map[y, x] == 3)
+                {
+                    //格納場所のインデックス
+                    goals.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+
+        //要素数はgoals.Countで取得
+        for(int i = 0; i < goals.Count; i++)
+        {
+            GameObject f = field[goals[i].y, goals[i].x];
+            if (f == null || f.tag != "Box") { return false; }
+
+        }
+
+        Debug.Log("Clear");
+        return true;
+    }
+
     ////移動の可不可を判断して移動処理をするメソッド
     bool MoveObject(string tag, Vector2Int moveFrom, Vector2Int moveTo)
     {
@@ -67,6 +99,7 @@ public class GameManagerScript : MonoBehaviour
             //箱の移動処理、MoveNumberメソッド内でMoveNumberメソッドを呼び、
             //処理が再起している。移動可不可をboolで記録
             bool success = MoveObject(tag, moveTo, moveTo + velocity);
+
             //もし箱が移動失敗したら、プレイヤーの移動も失敗
             if (!success) { return false; }
         }
@@ -82,9 +115,11 @@ public class GameManagerScript : MonoBehaviour
     {
         //配列の実態の作成と初期化
         map = new int[,] {
-            {1,0,0,0,0},
             {0,0,0,0,0},
-            {0,0,0,0,0},
+            {0,3,1,3,0},
+            {0,0,2,0,0},
+            {0,2,3,2,0},
+            {0,0,0,0,0}
         };
         field = new GameObject
         [
@@ -100,10 +135,30 @@ public class GameManagerScript : MonoBehaviour
                 {
                     field[y,x] = Instantiate(playerPrefab, new Vector3(x, map.GetLength(0) - y, 0), Quaternion.identity);
                 }
+                if (map[y, x] == 2)
+                {
+                    field[y, x] = Instantiate(boxPrefab, new Vector3(x, map.GetLength(0) - y, 0), Quaternion.identity);
+                }
+                if (map[y, x] == 3)
+                {
+                    field[y, x] = Instantiate(goalPrefab, new Vector3(x, map.GetLength(0) - y, 0.01f), Quaternion.identity);
+                }
             }
         }
 
         //PrintArray();
+    }
+
+    void DeleteObject()
+    {
+        for (int y = 0; y < map.GetLength(0); y++)
+        {
+            for (int x = 0; x < map.GetLength(1); x++)
+            {
+                Destroy(field[y, x]);
+                
+            }
+        }
     }
 
     // Update is called once per frame
@@ -115,6 +170,7 @@ public class GameManagerScript : MonoBehaviour
 
             MoveObject(playerPrefab.tag, playerIndex, new Vector2Int(playerIndex.x + 1,playerIndex.y));
             //PrintArray();
+            
         }
 
         if (Input.GetKeyDown(KeyCode.LeftArrow))
@@ -123,6 +179,7 @@ public class GameManagerScript : MonoBehaviour
 
             MoveObject(playerPrefab.tag, playerIndex, new Vector2Int(playerIndex.x - 1, playerIndex.y));
             //PrintArray();
+            
         }
 
         if (Input.GetKeyDown(KeyCode.DownArrow))
@@ -131,6 +188,7 @@ public class GameManagerScript : MonoBehaviour
 
             MoveObject(playerPrefab.tag, playerIndex, new Vector2Int(playerIndex.x, playerIndex.y + 1));
             //PrintArray();
+            
         }
 
         if (Input.GetKeyDown(KeyCode.UpArrow))
@@ -139,6 +197,23 @@ public class GameManagerScript : MonoBehaviour
 
             MoveObject(playerPrefab.tag, playerIndex, new Vector2Int(playerIndex.x, playerIndex.y - 1));
             //PrintArray();
+            
+        }
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            if (clearText)
+            {
+                clearText.SetActive(false);
+            }
+            DeleteObject();
+            Start();
+
+        }
+
+        if (IsCleared())
+        {
+            clearText.SetActive(true);
         }
     }
 }
